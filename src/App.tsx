@@ -346,8 +346,11 @@ function LockScreenClock({ onBack }: { onBack: () => void }) {
   const [urlInput, setUrlInput] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
+  const [textColor, setTextColor] = useState('rgba(255, 255, 255, 0.8)');
+  const [textShadow, setTextShadow] = useState('0 0 20px rgba(147,197,253,0.1), 0 2px 15px rgba(0,0,0,0.3)');
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
 
   const resetHideTimer = useCallback(() => {
     if (showSettings) return;
@@ -399,15 +402,96 @@ function LockScreenClock({ onBack }: { onBack: () => void }) {
     }
   };
 
+  const analyzeImage = (image: HTMLImageElement) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Set canvas size to image size
+    canvas.width = image.width;
+    canvas.height = image.height;
+
+    // Draw image to canvas
+    ctx.drawImage(image, 0, 0);
+
+    // Get image data
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+
+    // Calculate average brightness
+    let totalBrightness = 0;
+    let pixelCount = 0;
+
+    // Sample every 10th pixel to improve performance
+    for (let i = 0; i < data.length; i += 40) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      
+      // Calculate brightness using HSL formula
+      const brightness = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      totalBrightness += brightness;
+      pixelCount++;
+    }
+
+    const averageBrightness = totalBrightness / pixelCount;
+
+    // Adjust text color based on average brightness
+    if (averageBrightness > 0.6) {
+      // Bright image, use dark text
+      setTextColor('rgba(0, 0, 0, 0.8)');
+      setTextShadow('0 0 20px rgba(0, 0, 0, 0.1), 0 2px 15px rgba(255, 255, 255, 0.3)');
+    } else {
+      // Dark image, use light text
+      setTextColor('rgba(255, 255, 255, 0.8)');
+      setTextShadow('0 0 20px rgba(147,197,253,0.1), 0 2px 15px rgba(0,0,0,0.3)');
+    }
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => { setWallpaper(ev.target?.result as string); localStorage.setItem('lockscreen-wallpaper', ev.target?.result as string); setShowSettings(false); };
+    reader.onload = (ev) => {
+      const imageUrl = ev.target?.result as string;
+      setWallpaper(imageUrl);
+      localStorage.setItem('lockscreen-wallpaper', imageUrl);
+      setShowSettings(false);
+      
+      // Create an image element to analyze
+      const img = new Image();
+      img.onload = () => {
+        analyzeImage(img);
+      };
+      img.src = imageUrl;
+    };
     reader.readAsDataURL(file);
   };
 
-  const handleUrlSubmit = () => { if (urlInput.trim()) { setWallpaper(urlInput.trim()); localStorage.setItem('lockscreen-wallpaper', urlInput.trim()); setUrlInput(''); setShowSettings(false); } };
-  const clearWallpaper = () => { setWallpaper(''); localStorage.removeItem('lockscreen-wallpaper'); localStorage.removeItem('lockscreen-wallpaper-fit'); setShowSettings(false); };
+  const handleUrlSubmit = () => {
+    if (urlInput.trim()) {
+      const imageUrl = urlInput.trim();
+      setWallpaper(imageUrl);
+      localStorage.setItem('lockscreen-wallpaper', imageUrl);
+      setUrlInput('');
+      setShowSettings(false);
+      
+      // Create an image element to analyze
+      const img = new Image();
+      img.onload = () => {
+        analyzeImage(img);
+      };
+      img.src = imageUrl;
+    }
+  };
+  const clearWallpaper = () => { 
+    setWallpaper(''); 
+    localStorage.removeItem('lockscreen-wallpaper'); 
+    localStorage.removeItem('lockscreen-wallpaper-fit'); 
+    setShowSettings(false);
+    // Reset to default text color
+    setTextColor('rgba(255, 255, 255, 0.8)');
+    setTextShadow('0 0 20px rgba(147,197,253,0.1), 0 2px 15px rgba(0,0,0,0.3)');
+  };
 
   const fitModes = [
     { key: 'cover', label: '覆盖' },
@@ -444,20 +528,21 @@ function LockScreenClock({ onBack }: { onBack: () => void }) {
       <div className="absolute inset-0 flex flex-col items-center justify-center z-10 px-4">
         <div className="text-center w-full">
           <div className="flex items-end justify-center whitespace-nowrap">
-            <span className="text-white font-extralight tracking-tight tabular-nums drop-shadow-2xl" style={{ fontSize: 'clamp(4.5rem, 18vw, 16rem)', lineHeight: '0.85', textShadow: isDark ? '0 0 40px rgba(147,197,253,0.2), 0 4px 30px rgba(0,0,0,0.5)' : '0 4px 30px rgba(0,0,0,0.3)' }}>
+            <span className="font-extralight tracking-tight tabular-nums drop-shadow-2xl" style={{ fontSize: 'clamp(4.5rem, 18vw, 16rem)', lineHeight: '0.85', color: textColor, textShadow: textShadow }}>
               {String(hours).padStart(2, '0')}
             </span>
-            <span className="text-white/60 font-extralight tabular-nums animate-pulse mx-[0.1em]" style={{ fontSize: 'clamp(4rem, 16vw, 14rem)', lineHeight: '0.85' }}>:</span>
+            <span className="font-extralight tabular-nums animate-pulse mx-[0.1em]" style={{ fontSize: 'clamp(4rem, 16vw, 14rem)', lineHeight: '0.85', color: textColor }}>
+              :</span>
             <span className="relative inline-flex items-end">
-              <span className="text-white font-extralight tracking-tight tabular-nums drop-shadow-2xl" style={{ fontSize: 'clamp(4.5rem, 18vw, 16rem)', lineHeight: '0.85', textShadow: isDark ? '0 0 40px rgba(147,197,253,0.2), 0 4px 30px rgba(0,0,0,0.5)' : '0 4px 30px rgba(0,0,0,0.3)' }}>
+              <span className="font-extralight tracking-tight tabular-nums drop-shadow-2xl" style={{ fontSize: 'clamp(4.5rem, 18vw, 16rem)', lineHeight: '0.85', color: textColor, textShadow: textShadow }}>
                 {String(minutes).padStart(2, '0')}
               </span>
-              <span className="text-white/40 font-extralight tabular-nums absolute -bottom-[0.15em] -right-[2.8em]" style={{ fontSize: 'clamp(1.2rem, 4.5vw, 2.8rem)', textShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>
+              <span className="font-extralight tabular-nums absolute -bottom-[0.15em] -right-[2.8em]" style={{ fontSize: 'clamp(1.2rem, 4.5vw, 2.8rem)', color: textColor, textShadow: textShadow }}>
                 {String(now.getSeconds()).padStart(2, '0')}
               </span>
             </span>
           </div>
-          <p className="font-light mt-4 sm:mt-6 tracking-wide" style={{ fontSize: 'clamp(0.85rem, 2.2vw, 1.5rem)', color: isDark ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.7)', textShadow: isDark ? '0 0 20px rgba(147,197,253,0.1), 0 2px 15px rgba(0,0,0,0.3)' : '0 2px 15px rgba(0,0,0,0.2)' }}>
+          <p className="font-light mt-4 sm:mt-6 tracking-wide" style={{ fontSize: 'clamp(0.85rem, 2.2vw, 1.5rem)', color: textColor, textShadow: textShadow }}>
             {dateStr}
           </p>
         </div>
@@ -486,11 +571,11 @@ function LockScreenClock({ onBack }: { onBack: () => void }) {
 
       {/* Bottom hint - auto-hide */}
       <div className={`absolute bottom-0 left-0 right-0 z-20 pb-6 sm:pb-8 flex flex-col items-center gap-2 transition-all duration-500 ease-in-out ${showControls ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-        <div className="sm:hidden flex flex-col items-center gap-1" style={{ color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.4)' }}>
-          <ChevronUp className="w-5 h-5 animate-bounce" />
-          <span className="text-xs tracking-wider">上滑返回</span>
+        <div className="sm:hidden flex flex-col items-center gap-1" style={{ color: textColor }}>
+          <ChevronUp className="w-5 h-5 animate-bounce" style={{ color: textColor }} />
+          <span className="text-xs tracking-wider" style={{ color: textColor }}>上滑返回</span>
         </div>
-        <p className="hidden sm:block text-xs tracking-widest uppercase" style={{ color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.25)' }}>按 ESC 返回</p>
+        <p className="hidden sm:block text-xs tracking-widest uppercase" style={{ color: textColor }}>按 ESC 返回</p>
       </div>
 
       {/* Tap area to show controls when hidden */}
