@@ -10,8 +10,6 @@ import {
   Maximize2,
   Minimize2,
   Image as ImageIcon,
-  Link,
-  Upload,
   Settings2,
   X,
   Monitor,
@@ -44,131 +42,7 @@ function ThemeProvider({ children }: { children: React.ReactNode }) {
   return <ThemeContext.Provider value={{ theme, setTheme }}>{children}</ThemeContext.Provider>;
 }
 
-// ============ Font Context ============
-interface FontContextType {
-  fontFamily: string;
-  setFontFamily: (font: string) => void;
-  resetFont: () => void;
-}
-const FontContext = createContext<FontContextType>({ fontFamily: 'default', setFontFamily: () => {}, resetFont: () => {} });
-function useFont() { return useContext(FontContext); }
 
-function FontProvider({ children }: { children: React.ReactNode }) {
-  const [fontFamily, setFontFamilyState] = useState(() => localStorage.getItem('app-font-family') || 'default');
-  useEffect(() => {
-    localStorage.setItem('app-font-family', fontFamily);
-    document.documentElement.style.fontFamily = fontFamily && fontFamily !== 'default'
-      ? `'${fontFamily}', 'DymonShouXieTi', sans-serif`
-      : "'DymonShouXieTi', sans-serif";
-  }, [fontFamily]);
-  const setFontFamily = (f: string) => setFontFamilyState(f);
-  const resetFont = () => setFontFamilyState('default');
-  return <FontContext.Provider value={{ fontFamily, setFontFamily, resetFont }}>{children}</FontContext.Provider>;
-}
-
-// ============ Font Selector ============
-function FontSelector({ className = '' }: { className?: string }) {
-  const { fontFamily, setFontFamily, resetFont } = useFont();
-  const [isOpen, setIsOpen] = useState(false);
-  const [urlInput, setUrlInput] = useState('');
-  const [fontName, setFontName] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 640);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 640);
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
-
-  const loadFontFromUrl = async () => {
-    if (!urlInput.trim() || !fontName.trim()) return;
-    setLoading(true);
-    try {
-      const fontFace = new FontFace(fontName.trim(), `url(${urlInput.trim()})`);
-      const loaded = await fontFace.load();
-      document.fonts.add(loaded);
-      document.documentElement.style.fontFamily = `'${fontName.trim()}', sans-serif`;
-      setFontFamily(fontName.trim());
-      setUrlInput(''); setFontName(''); setIsOpen(false);
-    } catch { alert('字体加载失败，请检查链接是否正确'); }
-    setLoading(false);
-  };
-
-  const loadFontFromFile = async (file: File) => {
-    setLoading(true);
-    try {
-      const buffer = await file.arrayBuffer();
-      const name = file.name.replace(/\.(ttf|woff|woff2|otf)$/i, '');
-      const fontFace = new FontFace(name, buffer);
-      const loaded = await fontFace.load();
-      document.fonts.add(loaded);
-      document.documentElement.style.fontFamily = `'${name}', sans-serif`;
-      setFontFamily(name); setIsOpen(false);
-    } catch { alert('字体文件加载失败'); }
-    setLoading(false);
-  };
-
-  const panelContent = (
-    <>
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">自定义字体</p>
-        <button onClick={() => setIsOpen(false)} className="w-7 h-7 rounded-lg bg-gray-200/60 dark:bg-gray-700/50 flex items-center justify-center text-gray-500 dark:text-gray-300 hover:bg-gray-300/60 dark:hover:bg-gray-600/50">
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-        </button>
-      </div>
-      <div className="mb-3">
-        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 block">字体名称</label>
-        <input type="text" value={fontName} onChange={(e) => setFontName(e.target.value)} placeholder="如: MyFont" className="w-full h-10 px-3 text-sm bg-gray-100/80 dark:bg-gray-800/70 rounded-lg border border-gray-200/60 dark:border-gray-700/50 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400/40" />
-      </div>
-      <div className="mb-3">
-        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 block">字体链接 (.ttf/.woff/.woff2)</label>
-        <div className="flex gap-2">
-          <input type="text" value={urlInput} onChange={(e) => setUrlInput(e.target.value)} placeholder="https://example.com/font.woff2" className="flex-1 h-10 px-3 text-sm bg-gray-100/80 dark:bg-gray-800/70 rounded-lg border border-gray-200/60 dark:border-gray-700/50 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400/40" />
-          <button onClick={loadFontFromUrl} disabled={loading || !urlInput || !fontName} className="h-10 px-4 rounded-lg bg-blue-500 text-white text-xs font-medium disabled:opacity-40 hover:bg-blue-600 transition-colors whitespace-nowrap">{loading ? '加载中' : '加载'}</button>
-        </div>
-      </div>
-      <div className="mb-3">
-        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 block">或选择本地字体文件</label>
-        <button onClick={() => fileInputRef.current?.click()} disabled={loading} className="w-full h-10 rounded-lg bg-gray-100/80 dark:bg-gray-800/70 border border-gray-200/60 dark:border-gray-700/50 text-gray-600 dark:text-gray-300 text-xs flex items-center justify-center gap-1.5 hover:bg-gray-200/80 dark:hover:bg-gray-700/70 transition-colors disabled:opacity-40">
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
-          选择 .ttf / .woff / .woff2
-        </button>
-        <input ref={fileInputRef} type="file" accept=".ttf,.woff,.woff2,.otf" onChange={(e) => { const f = e.target.files?.[0]; if (f) loadFontFromFile(f); e.target.value = ''; }} className="hidden" />
-      </div>
-      {fontFamily && fontFamily !== 'default' && (
-        <button onClick={() => { resetFont(); setIsOpen(false); }} className="w-full h-9 rounded-lg bg-red-500/10 dark:bg-red-500/15 text-red-500 dark:text-red-400 text-xs flex items-center justify-center gap-1.5 hover:bg-red-500/20 transition-colors">
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>
-          恢复默认字体
-        </button>
-      )}
-    </>
-  );
-
-  return (
-    <div className={`relative ${className}`}>
-      <button onClick={() => setIsOpen(!isOpen)} className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all duration-300 bg-white/60 dark:bg-white/10 text-blue-600 dark:text-blue-200 hover:bg-white/80 dark:hover:bg-white/20 backdrop-blur-sm border border-white/30 dark:border-white/10" title="字体设置">
-        <svg className="w-4 h-4 sm:w-5 sm:h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 7 4 4 20 4 20 7" /><line x1="9" y1="20" x2="15" y2="20" /><line x1="12" y1="4" x2="12" y2="20" /></svg>
-      </button>
-      {isOpen && createPortal(
-        <>
-          <div className="fixed inset-0 z-[99998] sm:hidden bg-black/30" onClick={() => setIsOpen(false)} />
-          <div className="fixed bottom-0 left-0 right-0 z-[99999] sm:hidden rounded-t-2xl max-h-[80vh] overflow-y-auto">
-            <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-t border-white/50 dark:border-gray-700/40 shadow-2xl">
-              <div className="flex justify-center pt-3 pb-2"><div className="w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600" /></div>
-              <div className="p-4">{panelContent}<div className="h-4" /></div>
-            </div>
-          </div>
-          <div className="hidden sm:block fixed z-[99999]" style={{ top: '4rem', right: '1rem', width: '18rem' }}>
-            <div className="rounded-xl bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-white/50 dark:border-gray-700/40 shadow-2xl p-4">{panelContent}</div>
-          </div>
-        </>,
-        document.body
-      )}
-    </div>
-  );
-}
 
 // ============ Theme Toggle ============
 function ThemeToggle({ className = '' }: { className?: string }) {
@@ -595,7 +469,6 @@ function LockScreenClock({ onBack }: { onBack: () => void }) {
             <span className="hidden sm:inline">返回主页</span>
           </button>
           <div className="flex items-center gap-2">
-            <FontSelector />
             <button onClick={() => setTheme(isDark ? 'light' : 'dark')} className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/10 backdrop-blur-md border border-white/10 text-white/70 flex items-center justify-center hover:bg-white/20 hover:text-white transition-all duration-200" title={isDark ? '切换亮色模式' : '切换暗色模式'}>
               {isDark ? <Sun className="w-4 h-4 sm:w-5 sm:h-5" /> : <Moon className="w-4 h-4 sm:w-5 sm:h-5" />}
             </button>
@@ -736,10 +609,8 @@ function AppContent() {
 
 export default function App() {
   return (
-    <FontProvider>
-      <ThemeProvider>
-        <AppContent />
-      </ThemeProvider>
-    </FontProvider>
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 }

@@ -109,6 +109,34 @@
   }
 }
 
+.dark {
+  --color-background: hsl(210 40% 5%);
+  --color-foreground: hsl(210 10% 90%);
+
+  --color-card: hsl(210 40% 15% / 0.7);
+  --color-card-foreground: hsl(210 10% 90%);
+
+  --color-popover: hsl(210 40% 10% / 0.8);
+  --color-popover-foreground: hsl(210 10% 90%);
+
+  --color-secondary: hsl(210 30% 15%);
+  --color-secondary-foreground: hsl(210 10% 90%);
+
+  --color-muted: hsl(210 20% 10%);
+  --color-muted-foreground: hsl(210 15% 60%);
+
+  --color-border: hsl(210 30% 20% / 0.5);
+  --color-input: hsl(210 30% 20% / 0.5);
+
+  --color-sidebar: hsl(240 3.7% 15.9%);
+  --color-sidebar-foreground: hsl(240 5.9% 90%);
+  --color-sidebar-primary: hsl(240 4.8% 95.9%);
+  --color-sidebar-primary-foreground: hsl(240 5.9% 10%);
+  --color-sidebar-accent: hsl(240 3.7% 15.9%);
+  --color-sidebar-accent-foreground: hsl(240 4.8% 95.9%);
+  --color-sidebar-border: hsl(240 3.7% 15.9%);
+}
+
 /* Glassmorphism utility */
 .glass {
   background: linear-gradient(135deg, hsl(0 0% 100% / 0.65), hsl(0 0% 100% / 0.35));
@@ -120,7 +148,7 @@
     inset 0 1px 0 hsl(0 0% 100% / 0.6);
 }
 
-.glass-dark {
+.dark .glass {
   background: linear-gradient(135deg, hsl(210 40% 15% / 0.7), hsl(210 40% 10% / 0.5));
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -186,4 +214,12 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(210 30% 70% / 0.6);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: hsl(210 30% 30% / 0.5);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: hsl(210 30% 40% / 0.6);
 }
