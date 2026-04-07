@@ -10,6 +10,8 @@ import {
   Maximize2,
   Minimize2,
   Image as ImageIcon,
+  Upload,
+  Link,
   Settings2,
   X,
   Monitor,
